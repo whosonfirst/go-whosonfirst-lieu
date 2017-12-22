@@ -18,6 +18,7 @@ docker-build:
 	docker build -t wof-static .
 
 deps:
+	@GOPATH=$(GOPATH) go get -u "github.com/openvenues/gopostal/..."
 	@GOPATH=$(GOPATH) go get -u "github.com/tidwall/gjson"
 	@GOPATH=$(GOPATH) go get -u "github.com/tidwall/sjson"
 	@GOPATH=$(GOPATH) go get -u "github.com/whosonfirst/go-whosonfirst-geojson-v2"

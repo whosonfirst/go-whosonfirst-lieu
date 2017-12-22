@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"flag"
+	// "github.com/openvenues/gopostal/parser"
 	// "github.com/tidwall/gjson"
 	// "github.com/tidwall/sjson"
 	"io"
@@ -17,6 +18,11 @@ import (
 func Prepare(raw string, writer_ch chan []byte) {
 
 	// check for properties here...
+
+	// name
+	// addr:housenumber
+	// addr:street
+	// add:full
 
 	var stub interface{}
 	err := json.Unmarshal([]byte(raw), &stub)
