@@ -16,7 +16,7 @@ import (
 
 func ParseFile(path string) error {
 
-	log.Println("PARSE", path)
+	// log.Println("PARSE", path)
 
 	fh, err := os.Open(path)
 
@@ -87,6 +87,8 @@ func ParseRecord(raw string) error {
 
 	var id string
 
+	// this shouldn't be necessary with newer ATP dumps
+
 	if !rsp.Exists() {
 
 		rsp = gjson.Get(raw, "object.properties.ref")
@@ -111,7 +113,7 @@ func ParseRecord(raw string) error {
 		enc := base64.RawURLEncoding.EncodeToString(dig)
 
 		id = enc
-		log.Println("ENC", enc)
+
 	} else {
 
 		id = rsp.String()
@@ -123,7 +125,7 @@ func ParseRecord(raw string) error {
 			return nil
 		}
 
-		// log.Println(id, "", "", "")
+		log.Println(id, "", "", "")
 		return nil
 	}
 
@@ -132,8 +134,6 @@ func ParseRecord(raw string) error {
 	if !rsp.Exists() {
 		return errors.New("Can't determine same_as")
 	}
-
-	return nil
 
 	for _, o := range rsp.Array() {
 
@@ -163,6 +163,7 @@ func main() {
 		err := ParseFile(path)
 
 		if err != nil {
+			log.Println("failed to parse", path, err)
 			break
 		}
 	}
