@@ -3,8 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
-	"crypto/sha1"
-	"encoding/base64"
+	"encoding/csv"
 	"errors"
 	"flag"
 	"github.com/tidwall/gjson"
@@ -14,7 +13,20 @@ import (
 	"sync"
 )
 
-func ParseFile(path string) error {
+type Row struct {
+	Body []string
+}
+
+func NewRow(body []string) Row {
+
+	r := Row{
+		Body: body,
+	}
+
+	return r
+}
+
+func ParseFile(path string, writer_ch chan Row) error {
 
 	// log.Println("PARSE", path)
 
@@ -39,7 +51,7 @@ func ParseFile(path string) error {
 
 		record := scanner.Text()
 
-		go func(record string) {
+		go func(record string, writer_ch chan Row) {
 
 			defer func() {
 				wg.Done()
@@ -49,7 +61,7 @@ func ParseFile(path string) error {
 			case <-ctx.Done():
 				return
 			default:
-				err := ParseRecord(record)
+				err := ParseRecord(record, writer_ch)
 
 				if err != nil {
 					log.Println(err)
@@ -58,7 +70,7 @@ func ParseFile(path string) error {
 				}
 			}
 
-		}(record)
+		}(record, writer_ch)
 
 	}
 
@@ -68,7 +80,7 @@ func ParseFile(path string) error {
 
 }
 
-func ParseRecord(raw string) error {
+func ParseRecord(raw string, writer_ch chan Row) error {
 
 	var rsp gjson.Result
 
@@ -85,39 +97,14 @@ func ParseRecord(raw string) error {
 
 	rsp = gjson.Get(raw, "object.id")
 
-	var id string
-
-	// this shouldn't be necessary with newer ATP dumps
-
 	if !rsp.Exists() {
-
-		rsp = gjson.Get(raw, "object.properties.ref")
 
 		if !rsp.Exists() {
 			return errors.New("Can't determine object.id")
 		}
-
-		ref := rsp.String()
-
-		h := sha1.New()
-		io.WriteString(h, ref)
-
-		rsp = gjson.Get(raw, "object.properties.@spider")
-
-		if rsp.Exists() {
-			spider := rsp.String()
-			io.WriteString(h, spider)
-		}
-
-		dig := h.Sum(nil)
-		enc := base64.RawURLEncoding.EncodeToString(dig)
-
-		id = enc
-
-	} else {
-
-		id = rsp.String()
 	}
+
+	id := rsp.String()
 
 	if is_dupe == false {
 
@@ -125,7 +112,17 @@ func ParseRecord(raw string) error {
 			return nil
 		}
 
-		log.Println(id, "", "", "")
+		out := []string{
+			id,
+			"unknown",
+			"",
+			"",
+			"",
+		}
+
+		r := NewRow(out)
+
+		writer_ch <- r
 		return nil
 	}
 
@@ -148,7 +145,25 @@ func ParseRecord(raw string) error {
 		rsp = gjson.Get(o_str, "object.id")
 		other_id := rsp.String()
 
-		log.Println(id, classification, canonical, other_id)
+		rsp = gjson.Get(o_str, "object.properties.wof:id")
+		other_is_wof := rsp.Exists()
+
+		both_wof := ""
+
+		if is_wof && other_is_wof {
+			both_wof = "wof-wof"
+		}
+
+		out := []string{
+			id,
+			classification,
+			canonical,
+			other_id,
+			both_wof,
+		}
+
+		r := NewRow(out)
+		writer_ch <- r
 	}
 
 	return nil
@@ -156,15 +171,56 @@ func ParseRecord(raw string) error {
 
 func main() {
 
+	var out = flag.String("out", "", "")
 	flag.Parse()
+
+	var fh io.WriteCloser
+
+	if *out == "" {
+
+		fh = os.Stdout
+	} else {
+
+		f, err := os.Create(*out)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fh = f
+	}
+
+	writer := csv.NewWriter(fh)
+
+	writer_ch := make(chan Row)
+	done_ch := make(chan bool)
+
+	go func() {
+
+		for {
+			select {
+
+			case <-done_ch:
+				writer.Flush()
+				fh.Close()
+				return
+			case row := <-writer_ch:
+				writer.Write(row.Body)
+			default:
+				// pass
+			}
+		}
+	}()
 
 	for _, path := range flag.Args() {
 
-		err := ParseFile(path)
+		err := ParseFile(path, writer_ch)
 
 		if err != nil {
 			log.Println("failed to parse", path, err)
 			break
 		}
 	}
+
+	done_ch <- true
 }
