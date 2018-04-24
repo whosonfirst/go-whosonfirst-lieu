@@ -242,6 +242,15 @@ func Prepare(in io.Reader, out io.Writer) error {
 				}
 			}
 
+			if IsMissingHouseNumber(err) {
+
+				b, err = EnsureHouseNumber(b)
+
+				if err != nil {
+					log.Printf("%s at line number %d\n", err, line_number)
+				}
+			}
+
 			if err != nil {
 				continue
 			}
@@ -278,6 +287,33 @@ func EnsureStreet(feature []byte) ([]byte, error) {
 	var err error
 
 	feature, err = sjson.SetBytes(feature, "properties.addr:street", prop)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return feature, nil
+}
+
+func EnsureHouseNumber(feature []byte) ([]byte, error) {
+
+	if HasHouseNumber(feature) {
+		return feature, nil
+	}
+
+	possible_housenumbers := []string{
+		"properties.addr:housenumber",
+	}
+
+	prop, has_prop := HasProperty(feature, possible_housenumbers)
+
+	if !has_prop {
+		return nil, errors.New("Feature is missing addr:housenumber property")
+	}
+
+	var err error
+
+	feature, err = sjson.SetBytes(feature, "properties.addr:house_number", prop)
 
 	if err != nil {
 		return nil, err
