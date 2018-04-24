@@ -8,6 +8,7 @@ import (
 	"github.com/whosonfirst/go-whosonfirst-geojson-v2/properties/whosonfirst"
 	"github.com/whosonfirst/go-whosonfirst-index"
 	"github.com/whosonfirst/go-whosonfirst-index/utils"
+	"github.com/whosonfirst/go-whosonfirst-lieu"
 	"io"
 	"log"
 	"os"
@@ -105,17 +106,23 @@ func main() {
 			return nil
 		}
 
+		body, err := lieu.PrepareFeature(f.Bytes())
+
+		if err != nil {
+			return err
+		}
+
 		// there should be a better way... (20171222/thisisaaronland)
 
 		var stub interface{}
-		err = json.Unmarshal(f.Bytes(), &stub)
+		err = json.Unmarshal(body, &stub)
 
 		if err != nil {
 			log.Println("Failed to unmarshal", path)
 			return err
 		}
 
-		body, err := json.Marshal(stub)
+		body, err = json.Marshal(stub)
 
 		if err != nil {
 			log.Println("Failed to marshal", path)

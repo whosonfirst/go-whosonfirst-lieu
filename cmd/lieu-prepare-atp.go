@@ -11,6 +11,7 @@ import (
 	"github.com/openvenues/gopostal/parser"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
+	"github.com/whosonfirst/go-whosonfirst-lieu"
 	"io"
 	"log"
 	"os"
@@ -83,14 +84,20 @@ func Prepare(raw string, writer_ch chan []byte) error {
 
 	}
 
+	body, err := lieu.PrepareFeature([]byte(raw))
+
+	if err != nil {
+		return err
+	}
+
 	var stub interface{}
-	err := json.Unmarshal([]byte(raw), &stub)
+	err = json.Unmarshal(body, &stub)
 
 	if err != nil {
 		return errors.New("failed to unmarshal")
 	}
 
-	body, err := json.Marshal(stub)
+	body, err = json.Marshal(stub)
 
 	if err != nil {
 		return errors.New("failed to unmarshal")

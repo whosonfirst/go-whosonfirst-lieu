@@ -7,6 +7,7 @@ prep:
 self:   prep rmdeps
 	if test -d src; then rm -rf src; fi
 	mkdir -p src/github.com/whosonfirst/go-whosonfirst-lieu
+	cp *.go src/github.com/whosonfirst/go-whosonfirst-lieu
 	cp -r vendor/* src/
 
 rmdeps:
@@ -18,6 +19,7 @@ docker-build:
 	docker build -t wof-static .
 
 deps:
+	@GOPATH=$(GOPATH) go get -u "github.com/facebookgo/atomicfile"
 	@GOPATH=$(GOPATH) go get -u "github.com/openvenues/gopostal/..."
 	@GOPATH=$(GOPATH) go get -u "github.com/tidwall/gjson"
 	@GOPATH=$(GOPATH) go get -u "github.com/tidwall/sjson"
@@ -33,8 +35,10 @@ vendor-deps: rmdeps deps
 
 fmt:
 	go fmt cmd/*.go
+	go fmt *.go
 
 bin: 	self
+	@GOPATH=$(GOPATH) go build -o bin/lieu-prepare-geojsonls cmd/lieu-prepare-geojsonls.go
 	@GOPATH=$(GOPATH) go build -o bin/lieu-prepare-wof cmd/lieu-prepare-wof.go
 	@GOPATH=$(GOPATH) go build -o bin/lieu-prepare-atp cmd/lieu-prepare-atp.go
 	@GOPATH=$(GOPATH) go build -o bin/lieu-report-review cmd/lieu-report-review.go
