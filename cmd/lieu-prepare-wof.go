@@ -111,7 +111,31 @@ func main() {
 		ok, err = lieu.HasRequiredProperties(body)
 
 		if !ok {
-			return err
+
+			log.Printf("%s for ID %s\n", err, f.Id())
+
+			if lieu.IsMissingStreet(err) {
+
+				body, err = lieu.EnsureStreet(body)
+
+				if err != nil {
+					log.Printf("%s for ID %s\n", err, f.Id())
+				}
+			}
+
+			if lieu.IsMissingHouseNumber(err) {
+
+				body, err = lieu.EnsureHouseNumber(body)
+
+				if err != nil {
+					log.Printf("%s for ID %s\n", err, f.Id())
+				}
+			}
+
+			if err != nil {
+				log.Printf("skipping ID %s because missing or invalid required properties\n", f.Id())
+				return nil
+			}
 		}
 
 		body, err = lieu.EnstringifyProperties(body)
