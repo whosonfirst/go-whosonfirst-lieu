@@ -114,7 +114,7 @@ func HasPropertyNotEmpty(feature []byte, possible []string) bool {
 		return false
 	}
 
-	return has_prop
+	return true
 }
 
 func HasProperty(feature []byte, possible []string) (string, bool) {
@@ -199,13 +199,11 @@ func EnstringifyProperties(feature []byte) ([]byte, error) {
 			str_v := v.String()
 
 			if k == "addr:house_number" {
-
 				str_v = strings.Replace(str_v, " ", "", -1)
 				str_v = strings.Replace(str_v, "-", "", -1)
 			}
 
 			if k == "addr:postcode" && isISO(feature, "US") && len(str_v) > 5 {
-
 				str_v = str_v[0:5]
 			}
 
