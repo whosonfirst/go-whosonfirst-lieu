@@ -7,6 +7,7 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 	"io"
+	_ "log"
 	"strings"
 )
 
@@ -76,13 +77,13 @@ func Prepare(in io.Reader, out io.Writer) error {
 			return err
 		}
 
-		b, err = PrepareFeature(b)
+		b2, err := PrepareFeature(b)
 
 		if err != nil {
 			return err
 		}
 
-		out.Write(b)
+		out.Write(b2)
 	}
 
 	return nil
@@ -96,25 +97,31 @@ func PrepareFeature(feature []byte) ([]byte, error) {
 		return nil, errors.New("Feature is missing properties")
 	}
 
+	var err error
+
 	for k, v := range props.Map() {
 
 		if strings.HasPrefix(k, "addr:") {
 
 			str_v := v.String()
 
-			path := fmt.Sprintf("properties:%s", k)
-			sjson.SetBytes(feature, path, str_v)
-
 			if k == "addr:house_number" {
 
 				str_v = strings.Replace(str_v, " ", "", -1)
-				sjson.SetBytes(feature, path, str_v)
+				str_v = strings.Replace(str_v, "-", "", -1)
 			}
 
 			if k == "addr:postcode" && isISO(feature, "US") && len(str_v) > 5 {
 
 				str_v = str_v[0:5]
-				sjson.SetBytes(feature, path, str_v)
+			}
+
+			path := fmt.Sprintf("properties.%s", k)
+
+			feature, err = sjson.SetBytes(feature, path, str_v)
+
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
