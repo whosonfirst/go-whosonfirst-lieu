@@ -11,22 +11,86 @@ import (
 	"strings"
 )
 
+type MissingName struct {
+	error
+}
+
+func (e *MissingName) Error() string { return "Missing or invalid name" }
+
+func IsMissingName(err error) bool {
+
+	switch err.(type) {
+	case *MissingName:
+		return true
+	default:
+		return false
+	}
+}
+
+type MissingHouseNumber struct {
+	error
+}
+
+func (e *MissingHouseNumber) Error() string { return "Missing or invalid house number" }
+
+func IsMissingHouseNumber(err error) bool {
+
+	switch err.(type) {
+	case *MissingHouseNumber:
+		return true
+	default:
+		return false
+	}
+}
+
+type MissingStreet struct {
+	error
+}
+
+func (e *MissingStreet) Error() string { return "Missing or invalid street" }
+
+func IsMissingStreet(err error) bool {
+
+	switch err.(type) {
+	case *MissingStreet:
+		return true
+	default:
+		return false
+	}
+}
+
+type MissingCoordinates struct {
+	error
+}
+
+func (e *MissingCoordinates) Error() string { return "Missing or invalid coordinates" }
+
+func IsMissingCoordinates(err error) bool {
+
+	switch err.(type) {
+	case *MissingCoordinates:
+		return true
+	default:
+		return false
+	}
+}
+
 func HasRequiredProperties(feature []byte) (bool, error) {
 
 	if !HasName(feature) {
-		return false, errors.New("Missing or invalid name property")
+		return false, &MissingName{}
 	}
 
 	if !HasStreet(feature) {
-		return false, errors.New("Missing or invalid street property")
+		return false, &MissingStreet{}
 	}
 
 	if !HasHouseNumber(feature) {
-		return false, errors.New("Missing or invalid house_number property")
+		return false, &MissingHouseNumber{}
 	}
 
 	if !HasCoordinates(feature) {
-		return false, errors.New("Missing or invalid coordinates property")
+		return false, &MissingCoordinates{}
 	}
 
 	return true, nil
@@ -166,8 +230,21 @@ func Prepare(in io.Reader, out io.Writer) error {
 		ok, err := HasRequiredProperties(b)
 
 		if !ok {
+
 			log.Printf("%s at line number %d\n", err, line_number)
-			continue
+
+			if IsMissingStreet(err) {
+
+				b, err = EnsureStreet(b)
+
+				if err != nil {
+					log.Printf("%s at line number %d\n", err, line_number)
+				}
+			}
+
+			if err != nil {
+				continue
+			}
 		}
 
 		b2, err := EnstringifyProperties(b)
@@ -180,6 +257,33 @@ func Prepare(in io.Reader, out io.Writer) error {
 	}
 
 	return nil
+}
+
+func EnsureStreet(feature []byte) ([]byte, error) {
+
+	if HasStreet(feature) {
+		return feature, nil
+	}
+
+	possible_roads := []string{
+		"properties.addr:road",
+	}
+
+	prop, has_prop := HasProperty(feature, possible_roads)
+
+	if !has_prop {
+		return nil, errors.New("Feature is missing addr:road property")
+	}
+
+	var err error
+
+	feature, err = sjson.SetBytes(feature, "properties.addr:street", prop)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return feature, nil
 }
 
 func EnstringifyProperties(feature []byte) ([]byte, error) {
