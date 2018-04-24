@@ -106,7 +106,15 @@ func main() {
 			return nil
 		}
 
-		body, err := lieu.PrepareFeature(f.Bytes())
+		body := f.Bytes()
+
+		ok, err = lieu.HasRequiredProperties(body)
+
+		if !ok {
+			return err
+		}
+
+		body, err = lieu.EnstringifyProperties(body)
 
 		if err != nil {
 			return err

@@ -7,62 +7,146 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 	"io"
-	_ "log"
+	"log"
 	"strings"
 )
 
-func EnsureProperties(feature []byte) error {
+func HasRequiredProperties(feature []byte) (bool, error) {
+
+	if !HasName(feature) {
+		return false, errors.New("Missing or invalid name property")
+	}
+
+	if !HasStreet(feature) {
+		return false, errors.New("Missing or invalid street property")
+	}
+
+	if !HasHouseNumber(feature) {
+		return false, errors.New("Missing or invalid house_number property")
+	}
+
+	if !HasCoordinates(feature) {
+		return false, errors.New("Missing or invalid coordinates property")
+	}
+
+	return true, nil
+}
+
+func HasName(feature []byte) bool {
 
 	possible_names := []string{
 		"properties.name",
 		"properties.wof:name",
 	}
 
+	return HasPropertyNotEmpty(feature, possible_names)
+}
+
+func HasStreet(feature []byte) bool {
+
 	possible_streets := []string{
 		"properties.addr:street",
 	}
+
+	return HasPropertyNotEmpty(feature, possible_streets)
+}
+
+func HasHouseNumber(feature []byte) bool {
 
 	possible_housenumbers := []string{
 		"properties.addr:house_number",
 	}
 
-	if !hasProperty(feature, possible_names) {
-		return errors.New("Missing name property")
-	}
-
-	if !hasProperty(feature, possible_streets) {
-		return errors.New("Missing street property")
-	}
-
-	if !hasProperty(feature, possible_housenumbers) {
-		return errors.New("Missing house_number property")
-	}
-
-	return nil
+	return HasPropertyNotEmpty(feature, possible_housenumbers)
 }
 
-func hasProperty(feature []byte, possible []string) bool {
+func HasCoordinates(feature []byte) bool {
+
+	geom_type := gjson.GetBytes(feature, "geometry.type")
+
+	if !geom_type.Exists() {
+		return false
+	}
+
+	if geom_type.String() != "Point" {
+		return false
+	}
+
+	coords := gjson.GetBytes(feature, "geometry.coordinates")
+
+	if !coords.Exists() {
+		return false
+	}
+
+	for i, c := range coords.Array() {
+
+		v := c.Float()
+
+		if v == 0.0 {
+			return false
+		}
+
+		if i == 0 {
+			if v > 180.0 || v < -180.0 {
+				return false
+			}
+		} else if i == 1 {
+			if v > 90.0 || v < -90.0 {
+				return false
+			}
+		} else {
+			return false
+		}
+	}
+
+	return true
+}
+
+func HasPropertyNotEmpty(feature []byte, possible []string) bool {
+
+	prop, has_prop := HasProperty(feature, possible)
+
+	if !has_prop {
+		return false
+	}
+
+	if strings.Trim(prop, "") == "" {
+		return false
+	}
+
+	return has_prop
+}
+
+func HasProperty(feature []byte, possible []string) (string, bool) {
 
 	has_property := false
 
+	property := ""
 	for _, path := range possible {
 
 		v := gjson.GetBytes(feature, path)
 
 		if v.Exists() {
+			property = v.String()
 			has_property = true
 			break
 		}
 	}
 
-	return has_property
+	return property, has_property
 }
+
+// maybe probably add an Options thingy to be strict or liberal
+// about whether or not to skip records that fail the required
+// properties test... but not today (20180424/thisisaaronland)
 
 func Prepare(in io.Reader, out io.Writer) error {
 
 	reader := bufio.NewReader(in)
 
 	sep := byte('\n') // note that double-quotes will _freak_ Go out...
+
+	line_number := 0
 
 	for {
 
@@ -77,7 +161,16 @@ func Prepare(in io.Reader, out io.Writer) error {
 			return err
 		}
 
-		b2, err := PrepareFeature(b)
+		line_number += 1
+
+		ok, err := HasRequiredProperties(b)
+
+		if !ok {
+			log.Printf("%s at line number %d\n", err, line_number)
+			continue
+		}
+
+		b2, err := EnstringifyProperties(b)
 
 		if err != nil {
 			return err
@@ -89,7 +182,7 @@ func Prepare(in io.Reader, out io.Writer) error {
 	return nil
 }
 
-func PrepareFeature(feature []byte) ([]byte, error) {
+func EnstringifyProperties(feature []byte) ([]byte, error) {
 
 	props := gjson.GetBytes(feature, "properties")
 

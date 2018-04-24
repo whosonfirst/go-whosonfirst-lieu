@@ -84,7 +84,15 @@ func Prepare(raw string, writer_ch chan []byte) error {
 
 	}
 
-	body, err := lieu.PrepareFeature([]byte(raw))
+	body := []byte(raw)
+
+	ok, err := lieu.HasRequiredProperties(body)
+
+	if !ok {
+		return err
+	}
+
+	body, err = lieu.EnstringifyProperties([]byte(raw))
 
 	if err != nil {
 		return err
