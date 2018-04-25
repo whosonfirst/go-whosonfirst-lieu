@@ -274,14 +274,15 @@ func EnsureStreet(feature []byte) ([]byte, error) {
 		return feature, nil
 	}
 
-	possible_roads := []string{
+	alternative_streets := []string{
 		"properties.addr:road",
+		"properties.addr:po_box",
 	}
 
-	prop, has_prop := HasProperty(feature, possible_roads)
+	prop, has_prop := HasProperty(feature, alternative_streets)
 
 	if !has_prop {
-		return nil, errors.New("Feature is missing addr:road property")
+		return nil, errors.New("Feature is missing alternate addr:street properties")
 	}
 
 	var err error
