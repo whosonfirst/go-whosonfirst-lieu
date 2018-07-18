@@ -12,7 +12,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -23,11 +22,8 @@ func main() {
 	var mode = flag.String("mode", "repo", "")
 	var out = flag.String("out", "", "")
 	var timings = flag.Bool("timings", false, "")
-	var procs = flag.Int("processes", runtime.NumCPU()*2, "")
 
 	flag.Parse()
-
-	runtime.GOMAXPROCS(*procs)
 
 	var writer io.WriteCloser
 

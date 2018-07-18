@@ -355,6 +355,21 @@ func EnstringifyProperties(feature []byte) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
+
+			// dunno... it's just a hunch (20180425/thisisaaronland)
+			// https://github.com/openvenues/lieu/issues/9
+
+			if k == "addr:phone" && str_v == "" {
+
+				log.Println("EMPTY PHONE NUMBER")
+
+				feature, err = sjson.DeleteBytes(feature, path)
+
+				if err != nil {
+					return nil, err
+				}
+
+			}
 		}
 	}
 
