@@ -53,13 +53,18 @@ type Property struct {
 	Value gjson.Result
 }
 
-func GetProperty(feature []byte, key string) (*Property, error) {
+func GetPropertyByKey(feature []byte, key string) (*Property, error) {
 
 	candidates, ok := properties[key]
 
 	if !ok {
 		return nil, errors.New("Invalid candidates key")
 	}
+
+	return GetProperty(feature, candidates...)
+}
+
+func GetProperty(feature []byte, candidates ...string) (*Property, error) {
 
 	var prop *Property
 
@@ -456,7 +461,7 @@ func EnstringifyProperties(feature []byte) ([]byte, error) {
 
 					has_country := false
 
-					country, err := GetProperty(feature, "country")
+					country, err := GetPropertyByKey(feature, "country")
 
 					if err == nil {
 
