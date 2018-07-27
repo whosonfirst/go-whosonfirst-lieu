@@ -40,5 +40,6 @@ fmt:
 bin: 	self
 	@GOPATH=$(GOPATH) go build -o bin/lieu-prepare-geojsonls cmd/lieu-prepare-geojsonls.go
 	@GOPATH=$(GOPATH) go build -o bin/lieu-prepare-wof cmd/lieu-prepare-wof.go
+	@GOPATH=$(GOPATH) go build -o bin/lieu-prepare-wof cmd/lieu-validate.go
 	@GOPATH=$(GOPATH) go build -o bin/lieu-prepare-atp cmd/lieu-prepare-atp.go
 	@GOPATH=$(GOPATH) go build -o bin/lieu-report-review cmd/lieu-report-review.go
