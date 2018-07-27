@@ -11,3 +11,4 @@ bin
 testdata/*.txt
 *.geojson
 *.csv
+*.bz2
