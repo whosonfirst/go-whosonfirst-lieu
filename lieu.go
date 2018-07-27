@@ -275,30 +275,30 @@ func HasPropertyNotEmpty(feature []byte, possible []string) bool {
 
 func HasProperty(feature []byte, possible []string) (string, bool) {
 
-     	prop, err := GetProperty(feature, possible...)
+	prop, err := GetProperty(feature, possible...)
 
 	if err != nil {
-	   return "", false
+		return "", false
 	}
 
-	return  prop.Value.String(), true
+	return prop.Value.String(), true
 
 	/*
-	has_property := false
+		has_property := false
 
-	property := ""
-	for _, path := range possible {
+		property := ""
+		for _, path := range possible {
 
-		v := gjson.GetBytes(feature, path)
+			v := gjson.GetBytes(feature, path)
 
-		if v.Exists() {
-			property = v.String()
-			has_property = true
-			break
+			if v.Exists() {
+				property = v.String()
+				has_property = true
+				break
+			}
 		}
-	}
 
-	return property, has_property
+		return property, has_property
 	*/
 }
 
