@@ -2,13 +2,16 @@ package main
 
 import (
 	"bufio"
+	"compress/bzip2"
 	"context"
 	"encoding/json"
 	"flag"
+	"github.com/tidwall/gjson"
 	_ "github.com/whosonfirst/go-whosonfirst-lieu"
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -22,13 +25,22 @@ func ValidateFile(path string, throttle_ch chan bool) error {
 		log.Printf("time to validate %s %v\n", path, time.Since(t1))
 	}()
 
+	var r io.Reader
+
 	fh, err := os.Open(path)
 
 	if err != nil {
 		return err
 	}
 
-	scanner := bufio.NewScanner(fh)
+	r = fh
+
+	if filepath.Ext(path) == ".bz2" {
+		br := bufio.NewReader(fh)
+		r = bzip2.NewReader(br)
+	}
+
+	scanner := bufio.NewScanner(r)
 	lineno := 0
 
 	done_ch := make(chan bool)
@@ -85,6 +97,11 @@ func validateDocument(ctx context.Context, doc string, lineno int, done_ch chan 
 		return
 	}
 
+	rsp := gjson.Get(doc, "properties.addr:phone")
+
+	if rsp.Exists() {
+		log.Printf("PHONE '%s'\n", rsp.String())
+	}
 }
 
 func ensureValidJSON(doc string) error {
