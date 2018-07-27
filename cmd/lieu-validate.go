@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	_ "fmt"
 	_ "github.com/whosonfirst/go-whosonfirst-lieu"
 	"io"
 	"log"
@@ -20,7 +19,6 @@ func ValidateFile(path string, throttle_ch chan bool) error {
 	t1 := time.Now()
 
 	defer func() {
-
 		log.Printf("time to validate %s %v\n", path, time.Since(t1))
 	}()
 
@@ -41,7 +39,7 @@ func ValidateFile(path string, throttle_ch chan bool) error {
 
 	for scanner.Scan() {
 
-		<- throttle_ch
+		// <- throttle_ch
 		lineno += 1
 
 		doc := scanner.Text()
@@ -55,7 +53,7 @@ func ValidateFile(path string, throttle_ch chan bool) error {
 
 		select {
 		case <-done_ch:
-			throttle_ch <- true
+			// throttle_ch <- true
 			remaining -= 1
 		case e := <-err_ch:
 			log.Println(e)
@@ -127,7 +125,6 @@ func main() {
 	}
 
 	for _, path := range flag.Args() {
-
 		ValidateFile(path, throttle_ch)
 	}
 
