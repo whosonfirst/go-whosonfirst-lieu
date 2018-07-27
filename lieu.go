@@ -11,6 +11,86 @@ import (
 	"strings"
 )
 
+var properties map[string][]string
+
+func init() {
+
+	properties = map[string][]string{
+
+		"country": []string{
+			"properties.addr:country",
+			"properties.wof:country",
+			"properties.iso:country",
+		},
+
+		"housenumber": []string{
+			"properties.addr:housenumber",
+		},
+
+		"name": []string{
+			"properties.name",
+			"properties.wof:name",
+		},
+
+		"phone": []string{
+			"properties.addr:phone",
+		},
+
+		"street": []string{
+			"properties.addr:street",
+		},
+
+		"street_alt": []string{
+			"properties.addr:road",
+			"properties.addr:po_box",
+		},
+	}
+
+}
+
+type Property struct {
+	Key   string
+	Value gjson.Result
+}
+
+func GetProperty(feature []byte, key string) (*Property, error) {
+
+	candidates, ok := properties[key]
+
+	if !ok {
+		return nil, errors.New("Invalid candidates key")
+	}
+
+	var prop *Property
+
+	for _, path := range candidates {
+
+		rsp := gjson.GetBytes(feature, path)
+
+		if !rsp.Exists() {
+			continue
+		}
+
+		prop = &Property{
+			Key:   path,
+			Value: rsp,
+		}
+
+	}
+
+	if prop == nil {
+		return nil, &MissingProperty{}
+	}
+
+	return prop, nil
+}
+
+type MissingProperty struct {
+	error
+}
+
+func (e *MissingProperty) Error() string { return "Missing or invalid property" }
+
 type MissingName struct {
 	error
 }
@@ -98,30 +178,37 @@ func HasRequiredProperties(feature []byte) (bool, error) {
 
 func HasName(feature []byte) bool {
 
-	possible_names := []string{
-		"properties.name",
-		"properties.wof:name",
-	}
+	possible_names := properties["name"]
 
 	return HasPropertyNotEmpty(feature, possible_names)
 }
 
 func HasStreet(feature []byte) bool {
 
-	possible_streets := []string{
-		"properties.addr:street",
-	}
+	possible_streets := properties["street"]
 
 	return HasPropertyNotEmpty(feature, possible_streets)
 }
 
 func HasHouseNumber(feature []byte) bool {
 
-	possible_housenumbers := []string{
-		"properties.addr:house_number",
-	}
+	possible_housenumbers := properties["housenumber"]
 
 	return HasPropertyNotEmpty(feature, possible_housenumbers)
+}
+
+func HasPhone(feature []byte) bool {
+
+	possible_phones := properties["phone"]
+
+	return HasPropertyNotEmpty(feature, possible_phones)
+}
+
+func HasCountry(feature []byte) bool {
+
+	possible_countries := properties["country"]
+
+	return HasPropertyNotEmpty(feature, possible_countries)
 }
 
 func HasCoordinates(feature []byte) bool {
@@ -231,14 +318,14 @@ func Prepare(in io.Reader, out io.Writer) error {
 
 		if !ok {
 
-			log.Printf("%s at line number %d\n", err, line_number)
+			// log.Printf("%s at line number %d\n", err, line_number)
 
 			if IsMissingStreet(err) {
 
 				b, err = EnsureStreet(b)
 
 				if err != nil {
-					log.Printf("%s at line number %d\n", err, line_number)
+					// log.Printf("%s at line number %d\n", err, line_number)
 				}
 			}
 
@@ -247,7 +334,7 @@ func Prepare(in io.Reader, out io.Writer) error {
 				b, err = EnsureHouseNumber(b)
 
 				if err != nil {
-					log.Printf("%s at line number %d\n", err, line_number)
+					// log.Printf("%s at line number %d\n", err, line_number)
 				}
 			}
 
@@ -274,10 +361,7 @@ func EnsureStreet(feature []byte) ([]byte, error) {
 		return feature, nil
 	}
 
-	alternative_streets := []string{
-		"properties.addr:road",
-		"properties.addr:po_box",
-	}
+	alternative_streets := properties["street_alt"]
 
 	prop, has_prop := HasProperty(feature, alternative_streets)
 
@@ -339,6 +423,8 @@ func EnstringifyProperties(feature []byte) ([]byte, error) {
 
 			str_v := v.String()
 
+			str_v = strings.Trim(str_v, " ")
+
 			if k == "addr:house_number" {
 				str_v = strings.Replace(str_v, " ", "", -1)
 				str_v = strings.Replace(str_v, "-", "", -1)
@@ -359,16 +445,45 @@ func EnstringifyProperties(feature []byte) ([]byte, error) {
 			// dunno... it's just a hunch (20180425/thisisaaronland)
 			// https://github.com/openvenues/lieu/issues/9
 
-			if k == "addr:phone" && str_v == "" {
+			if k == "addr:phone" {
 
-				log.Println("EMPTY PHONE NUMBER")
+				ok_phone := true
 
-				feature, err = sjson.DeleteBytes(feature, path)
+				if str_v == "" {
+					log.Println("EMPTY PHONE NUMBER")
+					ok_phone = false
+				} else {
 
-				if err != nil {
-					return nil, err
+					has_country := false
+
+					country, err := GetProperty(feature, "country")
+
+					if err == nil {
+
+						rsp := country.Value
+						code := rsp.String()
+
+						if len(code) == 2 && !strings.HasPrefix(code, "X") {
+							has_country = true
+						}
+
+						log.Println("COUNTRY", code, has_country)
+					}
+
+					if !has_country {
+						log.Println("Invalid country for phone")
+						ok_phone = false
+					}
 				}
 
+				if !ok_phone {
+
+					feature, err = sjson.DeleteBytes(feature, path)
+
+					if err != nil {
+						return nil, err
+					}
+				}
 			}
 		}
 	}
@@ -380,11 +495,7 @@ func isISO(feature []byte, code string) bool {
 
 	match := false
 
-	paths := []string{
-		"properties.addr:country",
-		"properties.wof:country",
-		"properties.iso:country",
-	}
+	paths := properties["country"]
 
 	for _, p := range paths {
 

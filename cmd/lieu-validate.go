@@ -6,8 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"github.com/tidwall/gjson"
-	_ "github.com/whosonfirst/go-whosonfirst-lieu"
+	"github.com/whosonfirst/go-whosonfirst-lieu"
 	"io"
 	"log"
 	"os"
@@ -56,7 +55,7 @@ func ValidateFile(path string, throttle_ch chan bool) error {
 
 		doc := scanner.Text()
 
-		go validateDocument(ctx, doc, lineno, done_ch, err_ch)
+		go validateDocument(ctx, doc, lineno, throttle_ch, done_ch, err_ch)
 	}
 
 	remaining := lineno
@@ -77,11 +76,14 @@ func ValidateFile(path string, throttle_ch chan bool) error {
 	return nil
 }
 
-func validateDocument(ctx context.Context, doc string, lineno int, done_ch chan bool, err_ch chan error) {
+func validateDocument(ctx context.Context, doc string, lineno int, throttle_ch chan bool, done_ch chan bool, err_ch chan error) {
 
 	defer func() {
 		done_ch <- true
+		throttle_ch <- true
 	}()
+
+	<-throttle_ch
 
 	select {
 	case <-ctx.Done():
@@ -97,10 +99,10 @@ func validateDocument(ctx context.Context, doc string, lineno int, done_ch chan 
 		return
 	}
 
-	rsp := gjson.Get(doc, "properties.addr:phone")
+	if lieu.HasPhone([]byte(doc)) && !lieu.HasCountry([]byte(doc)) {
 
-	if rsp.Exists() {
-		log.Printf("PHONE '%s'\n", rsp.String())
+		ph, _ := lieu.GetProperty([]byte(doc), "phone")
+		log.Println("phone and country", ph.Value.String())
 	}
 }
 
