@@ -100,7 +100,6 @@ func validateDocument(ctx context.Context, doc string, lineno int, throttle_ch c
 	}
 
 	if lieu.HasPhone([]byte(doc)) && !lieu.HasCountry([]byte(doc)) {
-
 		ph, _ := lieu.GetPropertyByKey([]byte(doc), "phone")
 		log.Println("phone and country", ph.Value.String())
 	}

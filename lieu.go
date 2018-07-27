@@ -275,6 +275,15 @@ func HasPropertyNotEmpty(feature []byte, possible []string) bool {
 
 func HasProperty(feature []byte, possible []string) (string, bool) {
 
+     	prop, err := GetProperty(feature, possible...)
+
+	if err != nil {
+	   return "", false
+	}
+
+	return  prop.Value.String(), true
+
+	/*
 	has_property := false
 
 	property := ""
@@ -290,6 +299,7 @@ func HasProperty(feature []byte, possible []string) (string, bool) {
 	}
 
 	return property, has_property
+	*/
 }
 
 // maybe probably add an Options thingy to be strict or liberal
