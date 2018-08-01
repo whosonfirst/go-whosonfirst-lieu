@@ -191,6 +191,7 @@ func main() {
 	}
 
 	writer := csv.NewWriter(fh)
+	writer.Write([]string{"id", "classification", "is_canonical", "other_id", "is_wof"})
 
 	writer_ch := make(chan Row)
 	done_ch := make(chan bool)
