@@ -465,7 +465,6 @@ func EnstringifyProperties(feature []byte) ([]byte, error) {
 				ok_phone := true
 
 				if str_v == "" {
-					log.Println("EMPTY PHONE NUMBER")
 					ok_phone = false
 				} else {
 
@@ -481,12 +480,10 @@ func EnstringifyProperties(feature []byte) ([]byte, error) {
 						if len(code) == 2 && !strings.HasPrefix(code, "X") {
 							has_country = true
 						}
-
-						log.Println("COUNTRY", code, has_country)
 					}
 
 					if !has_country {
-						log.Println("Invalid country for phone")
+						log.Println("Invalid country code for phone, skipping phone number")
 						ok_phone = false
 					}
 				}
