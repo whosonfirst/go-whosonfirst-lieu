@@ -20,7 +20,7 @@ func Travel(path string, cb TravelFunc) error {
 	t1 := time.Now()
 
 	defer func() {
-		log.Printf("time to validate %s %v\n", path, time.Since(t1))
+		log.Printf("time to travel %s %v\n", path, time.Since(t1))
 	}()
 
 	var r io.Reader
@@ -41,19 +41,43 @@ func Travel(path string, cb TravelFunc) error {
 	scanner := bufio.NewScanner(r)
 	lineno := 0
 
+	for scanner.Scan() {
+
+		doc := scanner.Text()
+		err := cb(doc)
+
+		if err != nil {
+		   return err
+		}
+	}	
+
+	return nil
+
+	// THIS LEAKS MEMORY... SOMEWHERE BUT WHERE?
+	// (20180808/thisisaaronland)
+
 	done_ch := make(chan bool)
 	err_ch := make(chan error)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	count_throttles := 10
+	throttle_ch := make(chan bool, count_throttles)
+
+	for i := 0; i < count_throttles; i++ {
+	    throttle_ch <- true
+	}
+
 	for scanner.Scan() {
+
+		<- throttle_ch
 
 		lineno += 1
 
 		doc := scanner.Text()
 
-		go func(ctx context.Context, lineno int, doc string, cb TravelFunc, done_ch chan bool, err_ch chan error) {
+		go func(lineno int, doc string) {
 
 			defer func() {
 				done_ch <- true
@@ -68,14 +92,14 @@ func Travel(path string, cb TravelFunc) error {
 
 			err := cb(doc)
 
-			if err != nil {
+			throttle_ch <- true
 
+			if err != nil {
 				msg := fmt.Sprintf("[%d] %s", lineno, err)
 				err_ch <- errors.New(msg)
-				return
 			}
 
-		}(ctx, lineno, doc, cb, done_ch, err_ch)
+		}(lineno, doc)
 	}
 
 	remaining := lineno
