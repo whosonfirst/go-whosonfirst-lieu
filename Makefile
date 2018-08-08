@@ -7,7 +7,8 @@ prep:
 self:   prep rmdeps
 	if test -d src; then rm -rf src; fi
 	mkdir -p src/github.com/whosonfirst/go-whosonfirst-lieu
-	cp *.go src/github.com/whosonfirst/go-whosonfirst-lieu
+	cp *.go src/github.com/whosonfirst/go-whosonfirst-lieu/
+	cp -r travel src/github.com/whosonfirst/go-whosonfirst-lieu/
 	cp -r vendor/* src/
 
 rmdeps:
@@ -43,3 +44,4 @@ bin: 	self
 	@GOPATH=$(GOPATH) go build -o bin/lieu-validate cmd/lieu-validate.go
 	@GOPATH=$(GOPATH) go build -o bin/lieu-prepare-atp cmd/lieu-prepare-atp.go
 	@GOPATH=$(GOPATH) go build -o bin/lieu-report-review cmd/lieu-report-review.go
+	@GOPATH=$(GOPATH) go build -o bin/lieu-wtf cmd/lieu-wtf.go
