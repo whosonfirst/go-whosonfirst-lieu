@@ -106,6 +106,14 @@ func ParseRecord(raw string, writer_ch chan Row) error {
 
 	id := rsp.String()
 
+	repo := ""
+
+	rsp = gjson.Get(raw, "object.properties.wof:repo")
+
+	if rsp.Exists() {
+		repo = rsp.String()
+	}
+
 	if is_dupe == false {
 
 		if is_wof {
@@ -114,7 +122,9 @@ func ParseRecord(raw string, writer_ch chan Row) error {
 
 		out := []string{
 			id,
+			repo,
 			"unknown",
+			"",
 			"",
 			"",
 			"",
@@ -154,11 +164,21 @@ func ParseRecord(raw string, writer_ch chan Row) error {
 			both_wof = "wof-wof"
 		}
 
+		other_repo := ""
+
+		rsp = gjson.Get(o_str, "object.properties.wof:repo")
+
+		if rsp.Exists() {
+			other_repo = rsp.String()
+		}
+
 		out := []string{
 			id,
+			repo,
 			classification,
 			canonical,
 			other_id,
+			other_repo,
 			both_wof,
 		}
 
@@ -191,7 +211,7 @@ func main() {
 	}
 
 	writer := csv.NewWriter(fh)
-	writer.Write([]string{"id", "classification", "is_canonical", "other_id", "is_wof"})
+	writer.Write([]string{"id", "repo", "classification", "is_canonical", "other_id", "other_repo", "is_wof"})
 
 	writer_ch := make(chan Row)
 	done_ch := make(chan bool)
